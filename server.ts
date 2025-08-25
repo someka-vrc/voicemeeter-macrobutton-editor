@@ -2,7 +2,7 @@ import { serve } from "bun";
 import { join } from "path";
 import { readFile, writeFile } from "fs/promises";
 import readline from "readline";
-import { existsSync, readFileSync } from "fs";
+import { existsSync } from "fs";
 
 const PUBLIC_DIR = join(process.cwd(), "build");
 
@@ -45,6 +45,27 @@ async function promptFilePath(): Promise<string> {
   });
 }
 
+// 空いているポートを自動で選択する関数
+async function getAvailablePort(startPort = 3000, maxPort = 3100): Promise<number> {
+  const net = await import("net");
+  for (let port = startPort; port <= maxPort; port++) {
+    const server = net.createServer();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(port, () => {
+          server.close(() => resolve());
+        });
+      });
+      return port;
+    } catch {
+      // ポート使用中
+    }
+  }
+  throw new Error("空いているポートが見つかりませんでした");
+}
+
+
 // 引数・環境変数・ユーザー入力でターゲットパスを取得
 /*
   PS voicemeeter-macrobutton-editor> .\foo.exe
@@ -70,8 +91,10 @@ console.log(`target file: ${TARGET_FILE}`);
 // 次回実行のためにファイルパスを記憶
 await Bun.file(PREV_PATH_FILE).write(TARGET_FILE);
 
-serve({
-  port: 3000,
+(async () => {
+  const port = await getAvailablePort();
+  serve({
+    port,
   async fetch(req) {
     const url = new URL(req.url);
     // API: ファイル読み込み
@@ -103,13 +126,11 @@ serve({
       return new Response("Not found", { status: 404 });
     }
   },
-});
-
-console.log(`http://localhost:3000`);
-
-// Windows環境ならサーバー起動時に自動でブラウザを開く
-if (process.platform === "win32") {
-  Bun.spawn(["cmd", "/c", "start", "http://localhost:3000"]);
-}
-
-console.log(`Ctrl+C または 閉じるボタンで終了できます。`);
+  });
+  console.log(`http://localhost:${port}`);
+  // Windows環境ならサーバー起動時に自動でブラウザを開く
+  if (process.platform === "win32") {
+    Bun.spawn(["cmd", "/c", `start http://localhost:${port}`]);
+  }
+  console.log(`Ctrl+C または 閉じるボタンで終了できます。`);
+})();
