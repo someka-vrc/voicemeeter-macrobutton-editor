@@ -10,6 +10,6 @@ export const GRID_GAP = 12;
 export const GRID_MAX_WIDTH = SORTABLE_ITEM_SIZE * GRID_COLUMNS + (GRID_COLUMNS - 1) * GRID_GAP;
 
 // アプリケーション情報
-export const APP_VERSION = "0.1.0";
+export const APP_VERSION = "0.2.0";
 export const APP_NAME = "Voicemeeter MacroButton Editor";
 export const APP_COPYRIGHT = "©Someka";
