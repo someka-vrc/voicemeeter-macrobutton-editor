@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useRef, useState } from "react";
+import ContextMenu from "./ContextMenu";
 import { MoreVertical, Trash2, GripVertical } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -11,7 +12,7 @@ interface SortableItemProps {
   name: string;
   subName: string;
   onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, action?: "clear") => void;
   type?: string;
 }
 
@@ -24,6 +25,20 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onEdit,
   type,
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // メニュー外クリックで閉じる
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuOpen]);
   const {
     attributes,
     listeners,
@@ -68,7 +83,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", width: "100%", position: "relative" }}>
         <button
           style={{ ...iconButtonStyle, cursor: "grab" }}
           title="並べ替え"
@@ -92,15 +107,33 @@ const SortableItem: React.FC<SortableItemProps> = ({
         >
           {index}
         </span>
-        <button
-          style={{ ...iconButtonStyle, cursor: "pointer" }}
-          title="メニュー"
-          tabIndex={-1}
-          onMouseEnter={(e) => e.currentTarget.style.background = "#f0f0f0"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-        >
-          <MoreVertical size={20} />
-        </button>
+        <div style={{ position: "relative" }} ref={menuRef}>
+          <button
+            style={{ ...iconButtonStyle, cursor: "pointer" }}
+            title="メニュー"
+            tabIndex={-1}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#f0f0f0"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
+          >
+            <MoreVertical size={20} />
+          </button>
+          <ContextMenu
+            open={menuOpen}
+            anchorEl={menuRef}
+            onClose={() => setMenuOpen(false)}
+            items={[
+              {
+                label: "Clear",
+                onClick: () => onEdit(id, "clear"),
+              },
+              // ここに他のメニューを追加可能
+            ]}
+          />
+        </div>
         <button
           style={{ ...iconButtonStyle, cursor: "pointer", marginRight: 0 }}
           title="削除"

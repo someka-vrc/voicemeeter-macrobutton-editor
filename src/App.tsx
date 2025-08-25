@@ -84,7 +84,19 @@ const App: React.FC = () => {
                   subName={item.MB_Subname}
                   type={item["@_type"]}
                   onDelete={handleDelete}
-                  onEdit={(id) => setEditModal({ open: true, id })}
+                  onEdit={(id, action) => {
+                    if (action === "clear") {
+                      setItems((prev) =>
+                        prev.map((item) =>
+                          item.ctrl.id === id
+                            ? { ...item, MB_Name: "", MB_Subname: "", "@_type": "0" }
+                            : item
+                        )
+                      );
+                    } else {
+                      setEditModal({ open: true, id });
+                    }
+                  }}
                 />
               ))}
             </div>
