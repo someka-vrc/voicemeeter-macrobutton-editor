@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MacroButtonConfiguration } from "./types/macroButton";
+import { MacroButtonElement } from "./types/macroButtonXml";
 import EditModal from "./components/EditModal";
 import SortableItem from "./components/SortableItem";
 import Header from "./components/Header";
@@ -38,14 +38,14 @@ const App: React.FC = () => {
   // 削除ボタン押下時の処理
   const handleDelete = (id: string) => {
     setItems((prev) => {
-      let filtered = prev.filter((item) => item.id !== id);
+      let filtered = prev.filter((item) => item.ctrl.id !== id);
       const usedIndexes = new Set(filtered.map((item) => item["@_index"]));
       while (filtered.length < MACROBUTTON_MAX) {
         let newIndex = 1;
         while (usedIndexes.has(newIndex)) newIndex++;
         filtered.push({
           ...defaultMacroButton,
-          id: uuidv4(),
+          ctrl: { id: uuidv4() },
           "@_index": newIndex,
         });
         usedIndexes.add(newIndex);
@@ -71,14 +71,14 @@ const App: React.FC = () => {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={items.map((i) => i.id)}
+            items={items.map((i) => i.ctrl.id)}
             strategy={rectSortingStrategy}
           >
             <div style={gridStyle}>
               {items.map((item, idx) => (
                 <SortableItem
-                  key={item.id}
-                  id={item.id}
+                  key={item.ctrl.id}
+                  id={item.ctrl.id}
                   index={idx + 1}
                   name={item.MB_Name}
                   subName={item.MB_Subname}
@@ -94,14 +94,14 @@ const App: React.FC = () => {
           open={editModal.open}
           item={
             editModal.id
-              ? items.find((i) => i.id === editModal.id) ?? null
+              ? items.find((i) => i.ctrl.id === editModal.id) ?? null
               : null
           }
-          onOk={(vals: Partial<MacroButtonConfiguration>) => {
+          onOk={(vals: Partial<MacroButtonElement>) => {
             if (!editModal.id) return;
             setItems((prev) =>
               prev.map((item) =>
-                item.id === editModal.id ? { ...item, ...vals } : item
+                item.ctrl.id === editModal.id ? { ...item, ...vals } : item
               )
             );
             setEditModal({ open: false, id: null });

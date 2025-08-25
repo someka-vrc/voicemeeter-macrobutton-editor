@@ -1,39 +1,23 @@
 import { useState, useEffect } from "react";
-import { XMLParser } from "fast-xml-parser";
 import { parseMacroButtons, generateXmlFromItems } from "../utils/xmlUtils";
-import { MacroButtonConfiguration, MacroButtonConfigMeta } from "../types/macroButton";
+import { MacroButtonElement, VBAudioVoicemeeterMacroButtonMap } from "../types/macroButtonXml";
+import { defaultXmlRoot } from "../defaults";
 
 export function useMacroButtonData() {
-  const [items, setItems] = useState<MacroButtonConfiguration[]>([]);
+  const [items, setItems] = useState<MacroButtonElement[]>([]);
   const [fileName, setFileName] = useState<string>("");
-  const [configMeta, setConfigMeta] = useState<MacroButtonConfigMeta>({
-    "@_x0": "0",
-    "@_y0": "0",
-    "@_dx": "796",
-    "@_dy": "212",
-  });
+  const [xmlRoot, setXmlRoot] =
+    useState<VBAudioVoicemeeterMacroButtonMap>(defaultXmlRoot);
 
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/read", { method: "GET" });
       const json = await res.json();
       if (json.success) {
-        const parser = new XMLParser({
-          ignoreAttributes: false,
-          attributeNamePrefix: "@_",
-        });
-        const parsed = parser.parse(json.data);
-        const config =
-          parsed?.VBAudioVoicemeeterMacroButtonMap?.MacroButtonConfiguration;
-        const list = parseMacroButtons(json.data);
+        const { root, elements: list } = parseMacroButtons(json.data);
         setItems(list);
+        setXmlRoot(root);
         setFileName(json.fileName || "(サーバー指定ファイル)");
-        setConfigMeta({
-          "@_x0": config?.["@_x0"] ?? "0",
-          "@_y0": config?.["@_y0"] ?? "0",
-          "@_dx": config?.["@_dx"] ?? "796",
-          "@_dy": config?.["@_dy"] ?? "212",
-        });
       } else {
         alert("ファイル読み込み失敗: " + json.error);
       }
@@ -42,7 +26,7 @@ export function useMacroButtonData() {
 
   const handleSave = async () => {
     try {
-      const xml = generateXmlFromItems(items, configMeta);
+      const xml = generateXmlFromItems(items, xmlRoot);
       const res = await fetch("/api/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,8 +48,7 @@ export function useMacroButtonData() {
     items,
     setItems,
     fileName,
-    configMeta,
-    setConfigMeta,
+    setXmlRoot,
     handleSave,
   };
 }
