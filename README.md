@@ -1,2 +1,2 @@
 # VoiceMeeterMacroButtonEditor
-CLI to edit VoiceMeeter macro button mapping
+GUI to edit VoiceMeeter macro button mapping
