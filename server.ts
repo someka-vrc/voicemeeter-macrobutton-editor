@@ -1,28 +1,22 @@
+
+
 import { serve } from "bun";
 import { join } from "path";
 import { readFile, writeFile } from "fs/promises";
 import readline from "readline";
 import { existsSync } from "fs";
 
-const PUBLIC_DIR = join(process.cwd(), "build");
-
-/** 前回のターゲットパスを記憶するテキストファイル */
+const PUBLIC_DIR = join(import.meta.dir, "build");
 const PREV_PATH_FILE = "PREV_PATH.txt";
 
-/** 前回のターゲットファイルのパス */
-const PREV_TARGET_FILE = existsSync(PREV_PATH_FILE)
-  ? await Bun.file(PREV_PATH_FILE).text()
-  : "";
-
-/** ユーザーにターゲットパスを入力させる */
-async function promptFilePath(): Promise<string> {
+async function promptFilePath(prevPath: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     });
-    if (PREV_TARGET_FILE)
-      console.log(`ファイルパスを入力してください。空欄で前回のパスを使用します(${PREV_TARGET_FILE})`);
+    if (prevPath)
+      console.log(`ファイルパスを入力してください。空欄で前回のパスを使用します(${prevPath})`);
     else
       console.log("ファイルパスを入力してください。");
 
@@ -30,22 +24,19 @@ async function promptFilePath(): Promise<string> {
       rl.close();
       const trimmed = answer.trim();
       if (!trimmed) {
-        if (PREV_TARGET_FILE) {
-          resolve(PREV_TARGET_FILE);
-          return;
+        if (prevPath) {
+          resolve(prevPath);
         } else {
-          console.error("ファイルパスが指定されませんでした。終了します。");
-          process.exit(1);
+          resolve("");
         }
+      } else {
+        const unquoted = trimmed.replace(/^"(.+)"$/, "$1");
+        resolve(unquoted);
       }
-      // 両端のダブルクォートを除去
-      const unquoted = trimmed.replace(/^"(.+)"$/, "$1");
-      resolve(unquoted);
     });
   });
 }
 
-// 空いているポートを自動で選択する関数
 async function getAvailablePort(startPort = 3000, maxPort = 3100): Promise<number> {
   const net = await import("net");
   for (let port = startPort; port <= maxPort; port++) {
@@ -65,72 +56,73 @@ async function getAvailablePort(startPort = 3000, maxPort = 3100): Promise<numbe
   throw new Error("空いているポートが見つかりませんでした");
 }
 
+async function main() {
+  try {
+    const prevTargetFile = existsSync(PREV_PATH_FILE)
+      ? await Bun.file(PREV_PATH_FILE).text()
+      : "";
 
-// 引数・環境変数・ユーザー入力でターゲットパスを取得
-/*
-  PS voicemeeter-macrobutton-editor> .\foo.exe
-  [ "bun", "B:/~BUN/root/foo.exe", "D:\\develop\\workspace\\voicemeeter-macrobutton-editor\\foo.exe" ]
-  ファイルが存在しません: 
-  PS voicemeeter-macrobutton-editor> .\foo.exe ss
-  [ "bun", "B:/~BUN/root/foo.exe", "ss" ]
-  ファイルが存在しません: ss
-*/
-const TARGET_FILE = (Bun.argv[2]?.endsWith(".exe") ? "" : Bun.argv[2])
-  || process.env.MACROBUTTON_FILE
-  || await promptFilePath();
-console.log(Bun.argv);
+    const argPath = Bun.argv[2]?.endsWith(".exe") ? "" : Bun.argv[2];
+    const targetFile =
+      argPath ||
+      process.env.MACROBUTTON_FILE ||
+      (await promptFilePath(prevTargetFile));
 
-// なければ終了
-if (!existsSync(TARGET_FILE)) {
-  console.error(`ファイルが存在しません: ${TARGET_FILE}`);
-  process.exit(1);
+    if (!targetFile || !existsSync(targetFile)) {
+      console.error(`ファイルが存在しません: ${targetFile}`);
+      process.exit(1);
+    }
+
+    console.log(Bun.argv);
+    console.log(`target file: ${targetFile}`);
+
+    await Bun.file(PREV_PATH_FILE).write(targetFile);
+
+    const port = await getAvailablePort();
+    serve({
+      port,
+      async fetch(req) {
+        const url = new URL(req.url);
+        // API: ファイル読み込み
+        if (url.pathname === "/api/read" && req.method === "GET") {
+          try {
+            const data = await readFile(targetFile, "utf-8");
+            // ファイル名のみ抽出
+            const fileName = targetFile.split(/[/\\]/).pop();
+            return new Response(JSON.stringify({ success: true, data, fileName }), { headers: { "Content-Type": "application/json" } });
+          } catch (e) {
+            return new Response(JSON.stringify({ success: false, error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" } });
+          }
+        }
+        // API: ファイル保存
+        if (url.pathname === "/api/save" && req.method === "POST") {
+          const { data } = await req.json();
+          try {
+            await writeFile(targetFile, data, "utf-8");
+            return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+          } catch (e) {
+            return new Response(JSON.stringify({ success: false, error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" } });
+          }
+        }
+        // 静的ファイル配信
+        let filePath = url.pathname === "/" ? "/index.html" : url.pathname;
+        try {
+          return new Response(Bun.file(join(PUBLIC_DIR, filePath)));
+        } catch {
+          return new Response("Not found", { status: 404 });
+        }
+      },
+    });
+
+    console.log(`http://localhost:${port}`);
+    if (process.platform === "win32") {
+      Bun.spawn(["cmd", "/c", `start http://localhost:${port}`]);
+    }
+    console.log(`Ctrl+C または 閉じるボタンで終了できます。`);
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
+  }
 }
 
-console.log(`target file: ${TARGET_FILE}`);
-
-// 次回実行のためにファイルパスを記憶
-await Bun.file(PREV_PATH_FILE).write(TARGET_FILE);
-
-(async () => {
-  const port = await getAvailablePort();
-  serve({
-    port,
-  async fetch(req) {
-    const url = new URL(req.url);
-    // API: ファイル読み込み
-    if (url.pathname === "/api/read" && req.method === "GET") {
-      try {
-        const data = await readFile(TARGET_FILE, "utf-8");
-        // ファイル名のみ抽出
-        const fileName = TARGET_FILE.split(/[/\\]/).pop();
-        return new Response(JSON.stringify({ success: true, data, fileName }), { headers: { "Content-Type": "application/json" } });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" } });
-      }
-    }
-    // API: ファイル保存
-    if (url.pathname === "/api/save" && req.method === "POST") {
-      const { data } = await req.json();
-      try {
-        await writeFile(TARGET_FILE, data, "utf-8");
-        return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" } });
-      }
-    }
-    // 静的ファイル配信
-    let filePath = url.pathname === "/" ? "/index.html" : url.pathname;
-    try {
-      return new Response(Bun.file(join(PUBLIC_DIR, filePath)));
-    } catch {
-      return new Response("Not found", { status: 404 });
-    }
-  },
-  });
-  console.log(`http://localhost:${port}`);
-  // Windows環境ならサーバー起動時に自動でブラウザを開く
-  if (process.platform === "win32") {
-    Bun.spawn(["cmd", "/c", `start http://localhost:${port}`]);
-  }
-  console.log(`Ctrl+C または 閉じるボタンで終了できます。`);
-})();
+main();
