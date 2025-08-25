@@ -1,4 +1,5 @@
 import React from "react";
+import { Save } from "lucide-react";
 import { APP_NAME } from "../constants";
 
 type HeaderProps = {
@@ -38,9 +39,7 @@ const Header: React.FC<HeaderProps> = ({ onSave }) => (
         title="ファイルを保存"
         onClick={onSave}
       >
-        <span role="img" aria-label="save">
-          💾
-        </span>
+        <Save size={22} />
       </button>
     </div>
   </header>
