@@ -1,10 +1,10 @@
 
 import { defaultMacroButton, defaultMB_MIDI, defaultMB_TRIGGER, defaultMB_XINPUT, defaultMB_GPIO, defaultVBHIDMapItem } from "../defaults";
-import { MacroButton } from "../types/macroButton";
+import { MacroButtonConfiguration, MacroButtonConfigMeta } from "../types/macroButton";
 import { v4 as uuidv4 } from "uuid";
 import { XMLParser, XMLBuilder } from "fast-xml-parser";
 
-export function generateXmlFromItems(items: MacroButton[], configMeta: any): string {
+export function generateXmlFromItems(items: MacroButtonConfiguration[], configMeta: MacroButtonConfigMeta): string {
   // indexのみ再採番し、idフィールドは除外
   const macroButtons = items.map((item, idx) => {
     const { id, ...rest } = item;
@@ -32,7 +32,7 @@ export function generateXmlFromItems(items: MacroButton[], configMeta: any): str
 }
 
 
-export function parseMacroButtons(xml: string): MacroButton[] {
+export function parseMacroButtons(xml: string): MacroButtonConfiguration[] {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
@@ -45,7 +45,7 @@ export function parseMacroButtons(xml: string): MacroButton[] {
   const arr = Array.isArray(buttons) ? buttons : [buttons];
   return arr
     .map(
-      (btn: any): MacroButton => ({
+      (btn: any): MacroButtonConfiguration => ({
         ...defaultMacroButton,
         ...btn,
         id: uuidv4(), // 新規にuuidを発行

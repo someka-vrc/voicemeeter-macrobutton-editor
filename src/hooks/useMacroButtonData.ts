@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { XMLParser } from "fast-xml-parser";
 import { parseMacroButtons, generateXmlFromItems } from "../utils/xmlUtils";
-import { MacroButton, MacroButtonConfigMeta } from "../types/macroButton";
+import { MacroButtonConfiguration, MacroButtonConfigMeta } from "../types/macroButton";
 
 export function useMacroButtonData() {
-  const [items, setItems] = useState<MacroButton[]>([]);
+  const [items, setItems] = useState<MacroButtonConfiguration[]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [configMeta, setConfigMeta] = useState<MacroButtonConfigMeta>({
     "@_x0": "0",

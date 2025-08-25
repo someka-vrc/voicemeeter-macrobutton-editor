@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { MacroButton } from "../types/macroButton";
+import { MacroButtonConfiguration } from "../types/macroButton";
 
 interface EditModalProps {
   open: boolean;
-  item: MacroButton | null;
-  onOk: (values: Partial<MacroButton>) => void;
+  item: MacroButtonConfiguration | null;
+  onOk: (values: Partial<MacroButtonConfiguration>) => void;
   onCancel: () => void;
 }
 
 const EditModal: React.FC<EditModalProps> = ({ open, item, onOk, onCancel }) => {
-  const [values, setValues] = useState<Partial<MacroButton>>({});
+  const [values, setValues] = useState<Partial<MacroButtonConfiguration>>({});
   useEffect(() => {
     if (item) {
       setValues({

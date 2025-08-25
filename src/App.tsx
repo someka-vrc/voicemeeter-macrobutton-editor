@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MacroButton } from "./types/macroButton";
+import { MacroButtonConfiguration } from "./types/macroButton";
 import EditModal from "./components/EditModal";
 import SortableItem from "./components/SortableItem";
 import Header from "./components/Header";
@@ -97,7 +97,7 @@ const App: React.FC = () => {
               ? items.find((i) => i.id === editModal.id) ?? null
               : null
           }
-          onOk={(vals: Partial<MacroButton>) => {
+          onOk={(vals: Partial<MacroButtonConfiguration>) => {
             if (!editModal.id) return;
             setItems((prev) =>
               prev.map((item) =>

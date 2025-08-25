@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
-import { MacroButton } from "../types/macroButton";
+import { MacroButtonConfiguration } from "../types/macroButton";
 import { replaceButtonRefs } from "../utils/dndUtils";
 
-export function useMacroButtonDnD(items: MacroButton[], setItems: (items: MacroButton[]) => void) {
+export function useMacroButtonDnD(items: MacroButtonConfiguration[], setItems: (items: MacroButtonConfiguration[]) => void) {
   const handleDragEnd = useCallback((event: any) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
